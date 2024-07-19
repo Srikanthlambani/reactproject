@@ -56,6 +56,20 @@ export default function Signup() {
                 return;
             }
             console.log(data);
+            console.log("user",data.user);
+            console.log("user.username",data.user.username);
+            console.log("user.pool.userPoolId",data.user.pool.userPoolId)
+            if(data && !data.userConfirmed)
+            {
+                console.log("inside the ifcondition");
+                const poolData = {
+                    ClientId: data.user.pool.clientId,
+                    UserPoolId: data.user.pool.userPoolId,
+                    // Add other serializable properties if needed
+                };
+                console.log("Poool is ---> ",poolData);
+                navigate('/conformation', { state: { pool: poolData, username: data.user.username } });
+            }
         });
     };
 

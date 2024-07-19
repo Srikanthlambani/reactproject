@@ -1,19 +1,58 @@
-import React, {createContext} from "react";
-import { CognitoUser, AuthenticationDetails } from 'amazon-cognito-identity-js';
-import Usepool from './Userpool';
+import React, { createContext, useEffect } from 'react';
+import { CognitoUser, AuthenticationDetails, confirmRegistration, CognitoUserPool } from 'amazon-cognito-identity-js';
+import Pool from './Userpool';
+
 const AccountContext = createContext();
+
 const Account = (props) => {
-    const authenticate = async(Username,Password) =>{
-        const user = new CognitoUser({Username,Usepool});
-        const authDetails = new AuthenticationDetails({Username,Password});
-        return await new Promise((resolve,reject)=>{
+    const getsession = async () => {
+        return await new Promise((resolve, reject) => {
+            const user = Pool.getCurrentUser();
+            if (user) {
+                user.getSession(async (err, session) => {
+                    if (err) {
+                        reject();
+                    } else {
+                        const attributes = await new Promise((resolve, reject) => {
+                            user.getUserAttributes((err, attributes) => {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    const results = {};
+                                    for (let attribute of attributes) {
+                                        const { Name, value } = attribute;
+                                        results[Name] = value;
+                                    }
+                                    resolve(results);
+                                }
+                            });
+                        });
+                        resolve({ user, ...session, ...attributes });
+                    }
+                });
+            } else {
+                reject();
+            }
+        });
+    };
+
+    const logout = async () => {
+        const user = Pool.getCurrentUser();
+        if (user) {
+            user.signOut();
+        }
+    };
+
+    const authenticate = async (Username, Password) => {
+        return await new Promise((resolve, reject) => {
+            const user = new CognitoUser({ Username, Pool });
+            const authDetails = new AuthenticationDetails({ Username, Password });
             user.authenticateUser(authDetails, {
                 onSuccess: (data) => {
-                    console.log("onSuccess ", data);
+                    console.log("data is ",data);
                     resolve(data);
                 },
                 onFailure: (err) => {
-                    console.log("onFailure ", err);
                     reject(err);
                 },
                 newPasswordRequired: (data) => {
@@ -21,12 +60,37 @@ const Account = (props) => {
                     resolve(data);
                 }
             });
-        })
-    }
-    return(
-        <AccountContext.Provider value={{authenticate}}>
+        });
+    };
+    const conformation = async (Username, pool, code) => {
+        return await new Promise((resolve, reject) => {
+            console.log("inside the conformation function pool is ",pool);
+            const newPool = new CognitoUserPool(pool);
+            const user = new CognitoUser({ Username, Pool:newPool });
+            user.confirmRegistration(code, true, function (err, result) {
+                if (err) {
+                    console.log("errrororo is ",err);
+                    alert(err.message || JSON.stringify(err));
+                    resolve({messsage:'error had occured '});
+                }
+                console.log('call result: ' + result);
+                if(result=='SUCCESS')
+                {
+                    resolve(true)
+                }
+                else
+                {
+                    resolve(false);
+                }
+            });
+        });
+    };
+
+    return (
+        <AccountContext.Provider value={{ authenticate, getsession, logout , conformation}}>
             {props.children}
         </AccountContext.Provider>
-    )
+    );
 };
-export {Account, AccountContext};
+
+export { Account, AccountContext };
