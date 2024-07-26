@@ -1,5 +1,5 @@
 import React, { createContext, useEffect } from 'react';
-import { CognitoUser, AuthenticationDetails, confirmRegistration, CognitoUserPool } from 'amazon-cognito-identity-js';
+import { CognitoUser, AuthenticationDetails, confirmRegistration, CognitoUserPool, CookieStorage } from 'amazon-cognito-identity-js';
 import Pool from './Userpool';
 
 const AccountContext = createContext();
@@ -45,7 +45,7 @@ const Account = (props) => {
 
     const authenticate = async (Username, Password) => {
         return await new Promise((resolve, reject) => {
-            const user = new CognitoUser({ Username, Pool });
+            const user = new CognitoUser({ Username, Pool ,Storage: new CookieStorage(({ domain: 'localhost', secure: 'false' }))});
             const authDetails = new AuthenticationDetails({ Username, Password });
             user.authenticateUser(authDetails, {
                 onSuccess: (data) => {
